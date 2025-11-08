@@ -7,7 +7,6 @@ import 'package:rest_api/screens/electronics.dart';
 import 'package:rest_api/screens/furniture.dart';
 import 'package:rest_api/screens/miscellaneous.dart';
 import 'package:rest_api/screens/shoes.dart';
-
 import 'create_product.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -35,6 +34,100 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       return productsList;
     }
+  }
+
+  // Delete product function
+  Future<void> deleteProduct(int productId, int index) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('https://api.escuelajs.co/api/v1/products/$productId'),
+      );
+
+      if (response.statusCode == 200) {
+        // Successfully deleted
+        setState(() {
+          productsList.removeAt(index);
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Product deleted successfully!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // Failed to delete
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete: ${response.statusCode}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Show confirmation dialog before deleting
+  void showDeleteConfirmation(BuildContext context, ProductsModel product, int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Delete Product',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          content: Text(
+            'Are you sure you want to delete "${product.title}"?',
+            style: const TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                deleteProduct(product.id!, index); // Delete product
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -136,7 +229,11 @@ class _HomeScreenState extends State<HomeScreen> {
               itemCount: productsList.length,
               itemBuilder: (context, index) {
                 final product = snapshot.data![index];
-                return ProductCard(product: product);
+                return ProductCard(
+                  product: product,
+                  index: index,
+                  onDelete: () => showDeleteConfirmation(context, product, index),
+                );
               },
             );
           }
@@ -148,8 +245,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class ProductCard extends StatelessWidget {
   final ProductsModel product;
+  final int index;
+  final VoidCallback onDelete;
 
-  const ProductCard({super.key, required this.product});
+  const ProductCard({
+    super.key,
+    required this.product,
+    required this.index,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -178,6 +282,14 @@ class ProductCard extends StatelessWidget {
               width: 100,
               height: 100,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 100,
+                  height: 100,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.image_not_supported),
+                );
+              },
             ),
           ),
           Expanded(
@@ -225,10 +337,14 @@ class ProductCard extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.grey[400],
-              size: 18,
+            child: IconButton(
+              icon: const Icon(
+                Icons.delete_outline,
+                color: Colors.red,
+                size: 24,
+              ),
+              onPressed: onDelete,
+              tooltip: 'Delete product',
             ),
           ),
         ],

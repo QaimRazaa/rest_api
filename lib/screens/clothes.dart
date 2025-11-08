@@ -14,7 +14,7 @@ class _ClothesState extends State<Clothes> {
   List<ProductsModel> productsList = [];
 
   Future<List<ProductsModel>> getClothes()async {
-    final response = await http.get(Uri.parse('https://api.escuelajs.co/api/v1/products?categoryId=21'));
+    final response = await http.get(Uri.parse('https://api.escuelajs.co/api/v1/products?categoryId=36'));
     var data = jsonDecode(response.body.toString());
     if(response.statusCode == 200){
       productsList.clear();
